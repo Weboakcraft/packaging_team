@@ -1,0 +1,676 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Oakcraft Packing Team Management</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+<style>
+  :root {
+    --green: #1e7a3c;
+    --green-dark: #155c2c;
+    --blue: #2456c9;
+    --orange: #e08a00;
+    --red: #c62828;
+    --bg: #f2f4f7;
+    --card: #ffffff;
+    --text: #1c2430;
+    --muted: #66707d;
+    --line: #e3e7ec;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  body { font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--text); padding-bottom: 90px; }
+
+  header { background: var(--green); color: #fff; padding: 14px 16px; position: sticky; top: 0; z-index: 20; }
+  header h1 { font-size: 18px; font-weight: 700; }
+  header .sub { font-size: 12px; opacity: .85; margin-top: 2px; }
+  #connBadge { float: right; font-size: 11px; background: rgba(255,255,255,.18); padding: 4px 10px; border-radius: 20px; margin-top: 2px; }
+
+  .tabs { display: flex; background: var(--card); border-bottom: 1px solid var(--line); position: sticky; top: 58px; z-index: 19; }
+  .tabs button { flex: 1; padding: 13px 4px; border: none; background: none; font-size: 14px; font-weight: 600; color: var(--muted); border-bottom: 3px solid transparent; cursor: pointer; }
+  .tabs button.active { color: var(--green); border-bottom-color: var(--green); }
+
+  .page { display: none; padding: 14px; max-width: 760px; margin: 0 auto; }
+  .page.active { display: block; }
+
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 14px; margin-bottom: 14px; }
+  .card h2 { font-size: 15px; margin-bottom: 10px; }
+  .hint { font-size: 12px; color: var(--muted); margin-top: 6px; line-height: 1.5; }
+
+  label { font-size: 13px; font-weight: 600; display: block; margin-bottom: 4px; }
+  input[type=text], input[type=number], input[type=date], input[type=tel], select, textarea {
+    width: 100%; padding: 11px 12px; font-size: 15px; border: 1px solid #cdd4dc; border-radius: 8px; background: #fff; color: var(--text);
+  }
+  .row2 { display: flex; gap: 10px; }
+  .row2 > div { flex: 1; }
+
+  .btn { display: inline-block; border: none; border-radius: 9px; padding: 12px 16px; font-size: 15px; font-weight: 700; cursor: pointer; }
+  .btn-green { background: var(--green); color: #fff; }
+  .btn-blue { background: var(--blue); color: #fff; }
+  .btn-orange { background: var(--orange); color: #fff; }
+  .btn-light { background: #e9edf2; color: var(--text); }
+  .btn-wa { background: #25D366; color: #fff; }
+  .btn-red-o { background: #fff; color: var(--red); border: 1px solid var(--red); }
+  .btn-block { width: 100%; margin-top: 10px; }
+  .btn:disabled { opacity: .5; }
+
+  /* team plan boxes */
+  .plan-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-top: 10px; }
+  .plan-box { border: 1px solid var(--line); border-radius: 10px; padding: 10px; text-align: center; }
+  .plan-box .num { font-size: 22px; font-weight: 800; }
+  .plan-box .lbl { font-size: 11px; color: var(--muted); margin-top: 2px; }
+  .plan-box.hot { border-color: var(--green); background: #edf7ef; }
+  .plan-box.hot .num { color: var(--green); }
+
+  /* worker rows */
+  .wrow { display: flex; align-items: center; gap: 8px; padding: 10px 0; border-bottom: 1px solid var(--line); }
+  .wrow:last-child { border-bottom: none; }
+  .wname { flex: 1; min-width: 0; }
+  .wname .nm { font-weight: 700; font-size: 14px; }
+  .wname .dt { font-size: 11px; color: var(--muted); }
+  .att-btn { border: 1px solid #cdd4dc; background: #fff; border-radius: 8px; padding: 8px 10px; font-size: 12px; font-weight: 700; cursor: pointer; color: var(--muted); min-width: 44px; }
+  .att-btn.P { background: var(--green); border-color: var(--green); color: #fff; }
+  .att-btn.A { background: var(--red); border-color: var(--red); color: #fff; }
+  .att-btn.H { background: var(--orange); border-color: var(--orange); color: #fff; }
+  .duty-sel { max-width: 150px; font-size: 13px !important; padding: 8px !important; }
+
+  .counts { display: flex; gap: 8px; margin: 10px 0; flex-wrap: wrap; }
+  .chip { font-size: 12px; font-weight: 700; padding: 6px 12px; border-radius: 20px; background: #e9edf2; }
+  .chip.g { background: #dff0e2; color: var(--green-dark); }
+  .chip.r { background: #fbe2e2; color: var(--red); }
+  .chip.o { background: #fdeed2; color: #8a5600; }
+
+  .summary-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .summary-table th, .summary-table td { text-align: left; padding: 7px 6px; border-bottom: 1px solid var(--line); }
+  .summary-table th { font-size: 11px; text-transform: uppercase; color: var(--muted); }
+  .duty-need { font-size: 12px; font-weight: 700; }
+  .ok-need { color: var(--green); }
+  .bad-need { color: var(--red); }
+
+  .toast { position: fixed; bottom: 84px; left: 50%; transform: translateX(-50%); background: #222c3a; color: #fff; padding: 11px 18px; border-radius: 10px; font-size: 14px; z-index: 99; display: none; max-width: 90%; text-align: center; }
+
+  .bottombar { position: fixed; bottom: 0; left: 0; right: 0; background: var(--card); border-top: 1px solid var(--line); padding: 10px 14px; display: flex; gap: 8px; z-index: 30; }
+  .bottombar .btn { flex: 1; padding: 12px 6px; font-size: 13px; }
+
+  .setup-note { background: #fff8e6; border: 1px solid #f0d48a; border-radius: 10px; padding: 12px; font-size: 13px; line-height: 1.55; margin-bottom: 14px; }
+  .setup-note b { color: #8a5600; }
+  code { background: #eef1f5; padding: 2px 5px; border-radius: 4px; font-size: 12px; }
+</style>
+</head>
+<body>
+
+<header>
+  <span id="connBadge">…</span>
+  <h1>Oakcraft Packing Team Management</h1>
+  <div class="sub">Attendance • Duty Plan • Daily Report</div>
+</header>
+
+<div class="tabs">
+  <button class="active" onclick="showTab('today', this)">Today's Plan</button>
+  <button onclick="showTab('workers', this)">Team</button>
+  <button onclick="showTab('report', this)">Report</button>
+</div>
+
+<!-- ================= TODAY ================= -->
+<div class="page active" id="page-today">
+
+  <div id="setupNote" class="setup-note" style="display:none">
+    <b>Demo Mode:</b> Google Sheet is not connected yet. Data will not be saved permanently.
+    Paste your Apps Script Web App URL in <code>index.html</code> (API_URL line) to connect. Steps are in the README file.
+  </div>
+
+  <div class="card">
+    <h2>Step 1 — Date &amp; Online Orders</h2>
+    <div class="row2">
+      <div>
+        <label>Date</label>
+        <input type="date" id="dayDate">
+      </div>
+      <div>
+        <label>Online Orders Today</label>
+        <input type="number" id="onlineOrders" min="0" placeholder="e.g. 120" oninput="renderPlan()">
+      </div>
+    </div>
+    <div class="plan-grid" id="planGrid"></div>
+    <div class="hint">Rule: up to 99 orders → 4 people • 100–150 → 6 people • 151–200 → 6 people • above 200 → 8 people. Online team is always first priority.</div>
+  </div>
+
+  <div class="card">
+    <h2>Step 2 — Mark Attendance</h2>
+    <div class="counts" id="attCounts"></div>
+    <div id="attList"></div>
+    <button class="btn btn-light btn-block" onclick="markAllPresent()">Mark All Present</button>
+    <div class="hint">Tap P = Present, A = Absent, H = Half Day. Then choose duty for present members.</div>
+  </div>
+
+  <div class="card">
+    <h2>Step 3 — Duty Plan</h2>
+    <button class="btn btn-blue btn-block" style="margin-top:0" onclick="autoAssign()">⚡ Auto Assign (Online First)</button>
+    <div id="dutySummary" style="margin-top:12px"></div>
+  </div>
+
+  <div class="card">
+    <h2>Notes (optional)</h2>
+    <textarea id="dayNotes" rows="2" placeholder="Anything special today..."></textarea>
+  </div>
+</div>
+
+<!-- ================= WORKERS ================= -->
+<div class="page" id="page-workers">
+  <div class="card">
+    <h2>Add Team Member</h2>
+    <div class="row2">
+      <div>
+        <label>Name</label>
+        <input type="text" id="newName" placeholder="Member name">
+      </div>
+      <div>
+        <label>Phone (optional)</label>
+        <input type="tel" id="newPhone" placeholder="Mobile no.">
+      </div>
+    </div>
+    <div style="margin-top:10px">
+      <label>Usual Duty</label>
+      <select id="newDuty"></select>
+    </div>
+    <button class="btn btn-green btn-block" onclick="addWorker()">+ Add Member</button>
+  </div>
+
+  <div class="card">
+    <h2>Team Members (<span id="workerCount">0</span>)</h2>
+    <div id="workerList"></div>
+  </div>
+</div>
+
+<!-- ================= REPORT ================= -->
+<div class="page" id="page-report">
+  <div class="card">
+    <h2>Daily Report Preview</h2>
+    <div id="reportPreview" style="font-size:13px; line-height:1.6"></div>
+  </div>
+  <div class="card">
+    <h2>Send Report</h2>
+    <button class="btn btn-wa btn-block" style="margin-top:0" onclick="shareWhatsApp()">📱 Share on WhatsApp (Text)</button>
+    <button class="btn btn-orange btn-block" onclick="downloadPDF()">📄 Download PDF Report</button>
+    <div class="hint">PDF downloads to phone — then attach it in WhatsApp. Text button opens WhatsApp directly with the report ready.</div>
+  </div>
+</div>
+
+<div class="bottombar">
+  <button class="btn btn-green" onclick="saveDay()">💾 Save Day</button>
+  <button class="btn btn-wa" onclick="shareWhatsApp()">WhatsApp</button>
+  <button class="btn btn-orange" onclick="downloadPDF()">PDF</button>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* =========================================================
+   SETTINGS — change these two things only
+   ========================================================= */
+// 1) Paste your Google Apps Script Web App URL here (from README steps).
+//    Leave empty "" to try the app in Demo Mode.
+var API_URL = "";
+
+// 2) Online team rules. You can change numbers any time.
+var ONLINE_RULES = [
+  { min: 0,   max: 99,  people: 4 },
+  { min: 100, max: 150, people: 6 },
+  { min: 151, max: 200, people: 6 },
+  { min: 201, max: 99999, people: 8 }
+];
+
+var DUTIES = ["Online Packing", "Offline Packing", "Inventory", "Returns", "Repair / Column Work"];
+var COMPANY = "Oakcraft";
+/* ========================================================= */
+
+var workers = [];            // {id, name, phone, duty, active}
+var att = {};                // workerId -> 'P' | 'A' | 'H'
+var assign = {};             // workerId -> duty
+var demoMode = false;
+
+// ---------- helpers ----------
+function $(id){ return document.getElementById(id); }
+function toast(msg){
+  var t = $('toast'); t.textContent = msg; t.style.display = 'block';
+  clearTimeout(t._h); t._h = setTimeout(function(){ t.style.display = 'none'; }, 2600);
+}
+function todayStr(){
+  var d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+function niceDate(iso){
+  if(!iso) return '';
+  var p = iso.split('-');
+  return p[2] + '/' + p[1] + '/' + p[0];
+}
+function onlineNeed(orders){
+  orders = Number(orders) || 0;
+  for (var i = 0; i < ONLINE_RULES.length; i++) {
+    if (orders >= ONLINE_RULES[i].min && orders <= ONLINE_RULES[i].max) return ONLINE_RULES[i].people;
+  }
+  return 4;
+}
+// safe local save (works on GitHub Pages; ignored if blocked)
+function lsSet(k, v){ try { localStorage.setItem(k, JSON.stringify(v)); } catch(e){} }
+function lsGet(k){ try { var v = localStorage.getItem(k); return v ? JSON.parse(v) : null; } catch(e){ return null; } }
+
+// ---------- tabs ----------
+function showTab(name, btn){
+  document.querySelectorAll('.page').forEach(function(p){ p.classList.remove('active'); });
+  document.querySelectorAll('.tabs button').forEach(function(b){ b.classList.remove('active'); });
+  $('page-' + name).classList.add('active');
+  btn.classList.add('active');
+  if (name === 'report') renderReportPreview();
+}
+
+// ---------- API ----------
+function apiGet(params){
+  var url = API_URL + '?' + new URLSearchParams(params).toString();
+  return fetch(url).then(function(r){ return r.json(); });
+}
+function apiPost(body){
+  // text/plain avoids CORS preflight with Apps Script
+  return fetch(API_URL, { method: 'POST', headers: {'Content-Type':'text/plain;charset=utf-8'}, body: JSON.stringify(body) })
+    .then(function(r){ return r.json(); });
+}
+
+// ---------- load ----------
+function init(){
+  $('dayDate').value = todayStr();
+  var sel = $('newDuty');
+  DUTIES.forEach(function(d){ var o = document.createElement('option'); o.value = d; o.textContent = d; sel.appendChild(o); });
+
+  if (!API_URL) {
+    demoMode = true;
+    $('connBadge').textContent = 'Demo Mode';
+    $('setupNote').style.display = 'block';
+    workers = lsGet('demo_workers') || [
+      { id:'W1', name:'Ramesh',  phone:'', duty:'Online Packing',  active:true },
+      { id:'W2', name:'Suresh',  phone:'', duty:'Online Packing',  active:true },
+      { id:'W3', name:'Mahesh',  phone:'', duty:'Offline Packing', active:true },
+      { id:'W4', name:'Dinesh',  phone:'', duty:'Inventory',       active:true },
+      { id:'W5', name:'Rakesh',  phone:'', duty:'Returns',         active:true }
+    ];
+    afterWorkersLoaded();
+    return;
+  }
+
+  $('connBadge').textContent = 'Connecting…';
+  apiGet({ action: 'getWorkers' }).then(function(res){
+    if (!res.ok) throw new Error(res.error);
+    workers = res.workers;
+    $('connBadge').textContent = '✓ Connected';
+    afterWorkersLoaded();
+  }).catch(function(err){
+    demoMode = true;
+    $('connBadge').textContent = 'Offline';
+    $('setupNote').style.display = 'block';
+    workers = lsGet('demo_workers') || [];
+    afterWorkersLoaded();
+    toast('Could not connect to Google Sheet. Check API_URL.');
+  });
+}
+
+function afterWorkersLoaded(){
+  workers.forEach(function(w){
+    if (!(w.id in att)) att[w.id] = 'P';
+    if (!(w.id in assign)) assign[w.id] = w.duty || '';
+  });
+  renderPlan();
+  renderAttendance();
+  renderWorkers();
+  renderDutySummary();
+}
+
+// ---------- plan boxes ----------
+function renderPlan(){
+  var orders = Number($('onlineOrders').value) || 0;
+  var need = onlineNeed(orders);
+  var present = workers.filter(function(w){ return w.active && att[w.id] !== 'A'; }).length;
+  var others = Math.max(present - need, 0);
+  $('planGrid').innerHTML =
+    '<div class="plan-box hot"><div class="num">' + need + '</div><div class="lbl">Online Team Needed</div></div>' +
+    '<div class="plan-box"><div class="num">' + present + '</div><div class="lbl">Team Present</div></div>' +
+    '<div class="plan-box"><div class="num">' + others + '</div><div class="lbl">Free for Other Work</div></div>' +
+    '<div class="plan-box"><div class="num">' + orders + '</div><div class="lbl">Online Orders</div></div>';
+  renderDutySummary();
+}
+
+// ---------- attendance ----------
+function renderAttendance(){
+  var host = $('attList');
+  host.innerHTML = '';
+  var act = workers.filter(function(w){ return w.active; });
+  if (!act.length) { host.innerHTML = '<div class="hint">No team members yet. Add them in the Team tab.</div>'; }
+  act.forEach(function(w){
+    var row = document.createElement('div');
+    row.className = 'wrow';
+    var st = att[w.id] || 'P';
+    row.innerHTML =
+      '<div class="wname"><div class="nm">' + esc(w.name) + '</div><div class="dt">Usual: ' + esc(w.duty || '—') + '</div></div>' +
+      '<button class="att-btn ' + (st==='P'?'P':'') + '" onclick="setAtt(\'' + w.id + '\',\'P\')">P</button>' +
+      '<button class="att-btn ' + (st==='H'?'H':'') + '" onclick="setAtt(\'' + w.id + '\',\'H\')">H</button>' +
+      '<button class="att-btn ' + (st==='A'?'A':'') + '" onclick="setAtt(\'' + w.id + '\',\'A\')">A</button>' +
+      dutySelectHTML(w, st);
+    host.appendChild(row);
+  });
+  renderAttCounts();
+}
+function dutySelectHTML(w, st){
+  if (st === 'A') return '<span class="chip r">Absent</span>';
+  var opts = DUTIES.map(function(d){
+    return '<option value="' + esc(d) + '"' + (assign[w.id]===d?' selected':'') + '>' + esc(d) + '</option>';
+  }).join('');
+  return '<select class="duty-sel" onchange="assign[\'' + w.id + '\']=this.value; renderDutySummary()"><option value="">— duty —</option>' + opts + '</select>';
+}
+function setAtt(id, s){
+  att[id] = s;
+  if (s === 'A') assign[id] = '';
+  renderAttendance();
+  renderPlan();
+}
+function markAllPresent(){
+  workers.forEach(function(w){ if (w.active) att[w.id] = 'P'; });
+  renderAttendance(); renderPlan();
+}
+function renderAttCounts(){
+  var p=0,a=0,h=0;
+  workers.filter(function(w){return w.active;}).forEach(function(w){
+    if (att[w.id]==='A') a++; else if (att[w.id]==='H') h++; else p++;
+  });
+  $('attCounts').innerHTML =
+    '<span class="chip g">Present: ' + p + '</span>' +
+    '<span class="chip o">Half Day: ' + h + '</span>' +
+    '<span class="chip r">Absent: ' + a + '</span>';
+}
+
+// ---------- auto assign ----------
+function autoAssign(){
+  var need = onlineNeed($('onlineOrders').value);
+  var present = workers.filter(function(w){ return w.active && att[w.id] !== 'A'; });
+  present.forEach(function(w){ assign[w.id] = ''; });
+
+  // 1) online team first — prefer workers whose usual duty is Online Packing
+  var pool = present.slice();
+  pool.sort(function(a,b){
+    var ax = a.duty === 'Online Packing' ? 0 : 1;
+    var bx = b.duty === 'Online Packing' ? 0 : 1;
+    return ax - bx;
+  });
+  var online = pool.slice(0, need);
+  online.forEach(function(w){ assign[w.id] = 'Online Packing'; });
+
+  // 2) rest go to usual duty (not online), else spread over remaining duties
+  var rest = pool.slice(need);
+  var fallback = DUTIES.filter(function(d){ return d !== 'Online Packing'; });
+  var fi = 0;
+  rest.forEach(function(w){
+    if (w.duty && w.duty !== 'Online Packing') assign[w.id] = w.duty;
+    else { assign[w.id] = fallback[fi % fallback.length]; fi++; }
+  });
+
+  renderAttendance();
+  renderDutySummary();
+  if (present.length < need) {
+    toast('Warning: only ' + present.length + ' present, but online needs ' + need + '!');
+  } else {
+    toast('Auto assigned. Online team = ' + need + ' people.');
+  }
+}
+
+function renderDutySummary(){
+  var host = $('dutySummary');
+  var need = onlineNeed($('onlineOrders').value);
+  var html = '<table class="summary-table"><tr><th>Duty</th><th>People</th><th>Names</th></tr>';
+  DUTIES.forEach(function(d){
+    var names = workers.filter(function(w){ return w.active && att[w.id] !== 'A' && assign[w.id] === d; })
+                       .map(function(w){ return w.name + (att[w.id]==='H' ? ' (½)' : ''); });
+    var cnt = names.length;
+    var cntHtml = String(cnt);
+    if (d === 'Online Packing') {
+      cntHtml = '<span class="duty-need ' + (cnt >= need ? 'ok-need' : 'bad-need') + '">' + cnt + ' / ' + need + '</span>';
+    }
+    html += '<tr><td><b>' + esc(d) + '</b></td><td>' + cntHtml + '</td><td>' + esc(names.join(', ') || '—') + '</td></tr>';
+  });
+  var unassigned = workers.filter(function(w){ return w.active && att[w.id] !== 'A' && !assign[w.id]; });
+  if (unassigned.length) {
+    html += '<tr><td><b>No duty yet</b></td><td>' + unassigned.length + '</td><td>' + esc(unassigned.map(function(w){return w.name;}).join(', ')) + '</td></tr>';
+  }
+  html += '</table>';
+  host.innerHTML = html;
+}
+
+// ---------- workers tab ----------
+function renderWorkers(){
+  var host = $('workerList');
+  host.innerHTML = '';
+  $('workerCount').textContent = workers.filter(function(w){return w.active;}).length;
+  workers.forEach(function(w){
+    var row = document.createElement('div');
+    row.className = 'wrow';
+    row.innerHTML =
+      '<div class="wname"><div class="nm">' + esc(w.name) + (w.active ? '' : ' <span class="chip r">Removed</span>') + '</div>' +
+      '<div class="dt">' + esc(w.duty || 'No usual duty') + (w.phone ? ' • ' + esc(w.phone) : '') + '</div></div>' +
+      (w.active
+        ? '<button class="btn btn-red-o" style="padding:8px 12px;font-size:12px" onclick="removeWorker(\'' + w.id + '\')">Remove</button>'
+        : '<button class="btn btn-light" style="padding:8px 12px;font-size:12px" onclick="restoreWorker(\'' + w.id + '\')">Add Back</button>');
+    host.appendChild(row);
+  });
+}
+function addWorker(){
+  var name = $('newName').value.trim();
+  if (!name) { toast('Please type member name'); return; }
+  var phone = $('newPhone').value.trim();
+  var duty = $('newDuty').value;
+
+  if (demoMode) {
+    var id = 'W' + (workers.length + 1 + Math.floor(Math.random()*1000));
+    workers.push({ id:id, name:name, phone:phone, duty:duty, active:true });
+    att[id] = 'P'; assign[id] = duty;
+    lsSet('demo_workers', workers);
+    doneAdd();
+    return;
+  }
+  apiPost({ action:'addWorker', name:name, phone:phone, duty:duty }).then(function(res){
+    if (!res.ok) throw new Error(res.error);
+    workers.push(res.worker);
+    att[res.worker.id] = 'P'; assign[res.worker.id] = duty;
+    doneAdd();
+  }).catch(function(e){ toast('Error: ' + e.message); });
+
+  function doneAdd(){
+    $('newName').value = ''; $('newPhone').value = '';
+    renderWorkers(); renderAttendance(); renderPlan();
+    toast(name + ' added ✓');
+  }
+}
+function removeWorker(id){
+  var w = workers.find(function(x){ return x.id === id; });
+  if (!w) return;
+  if (!confirm('Remove ' + w.name + ' from the list?')) return;
+  w.active = false; att[id] = 'A';
+  if (demoMode) lsSet('demo_workers', workers);
+  else apiPost({ action:'updateWorker', id:id, active:false }).catch(function(){ toast('Could not save to sheet'); });
+  renderWorkers(); renderAttendance(); renderPlan();
+}
+function restoreWorker(id){
+  var w = workers.find(function(x){ return x.id === id; });
+  if (!w) return;
+  w.active = true; att[id] = 'P';
+  if (demoMode) lsSet('demo_workers', workers);
+  else apiPost({ action:'updateWorker', id:id, active:true }).catch(function(){ toast('Could not save to sheet'); });
+  renderWorkers(); renderAttendance(); renderPlan();
+}
+
+// ---------- save day ----------
+function buildDayRows(){
+  return workers.filter(function(w){ return w.active; }).map(function(w){
+    var s = att[w.id] || 'P';
+    return {
+      workerId: w.id,
+      workerName: w.name,
+      attendance: s === 'P' ? 'Present' : (s === 'H' ? 'Half Day' : 'Absent'),
+      duty: s === 'A' ? '' : (assign[w.id] || '')
+    };
+  });
+}
+function saveDay(){
+  var date = $('dayDate').value || todayStr();
+  var rows = buildDayRows();
+  if (!rows.length) { toast('No team members to save'); return; }
+  if (demoMode) {
+    lsSet('demo_day_' + date, { rows: rows, orders: $('onlineOrders').value, notes: $('dayNotes').value });
+    toast('Saved (demo mode — connect Google Sheet to save permanently)');
+    return;
+  }
+  toast('Saving…');
+  apiPost({ action:'saveDay', date: date, onlineOrders: Number($('onlineOrders').value)||0, rows: rows, notes: $('dayNotes').value })
+    .then(function(res){
+      if (!res.ok) throw new Error(res.error);
+      toast('✓ Day saved to Google Sheet');
+    }).catch(function(e){ toast('Error saving: ' + e.message); });
+}
+
+// ---------- report ----------
+function buildReportText(){
+  var date = $('dayDate').value || todayStr();
+  var orders = Number($('onlineOrders').value) || 0;
+  var need = onlineNeed(orders);
+  var act = workers.filter(function(w){ return w.active; });
+  var p = act.filter(function(w){ return att[w.id] === 'P'; });
+  var h = act.filter(function(w){ return att[w.id] === 'H'; });
+  var a = act.filter(function(w){ return att[w.id] === 'A'; });
+
+  var L = [];
+  L.push('*' + COMPANY + ' — Daily Packing Team Report*');
+  L.push('📅 ' + niceDate(date));
+  L.push('');
+  L.push('🛒 Online Orders: *' + orders + '*  (Team needed: ' + need + ')');
+  L.push('');
+  L.push('👥 *Attendance* — Total ' + act.length);
+  L.push('✅ Present: ' + p.length + (h.length ? '  |  🌓 Half Day: ' + h.length : '') + '  |  ❌ Absent: ' + a.length);
+  if (a.length) L.push('Absent: ' + a.map(function(w){ return w.name; }).join(', '));
+  L.push('');
+  L.push('📋 *Duty Plan*');
+  DUTIES.forEach(function(d){
+    var names = act.filter(function(w){ return att[w.id] !== 'A' && assign[w.id] === d; })
+                   .map(function(w){ return w.name + (att[w.id]==='H' ? ' (half)' : ''); });
+    if (names.length) L.push('• ' + d + ' (' + names.length + '): ' + names.join(', '));
+  });
+  var notes = $('dayNotes').value.trim();
+  if (notes) { L.push(''); L.push('📝 Note: ' + notes); }
+  L.push('');
+  L.push('— Sent from Packing Team Management System');
+  return L.join('\n');
+}
+function renderReportPreview(){
+  $('reportPreview').innerHTML = esc(buildReportText()).replace(/\n/g, '<br>').replace(/\*(.+?)\*/g, '<b>$1</b>');
+}
+function shareWhatsApp(){
+  var text = buildReportText();
+  window.open('https://wa.me/?text=' + encodeURIComponent(text), '_blank');
+}
+
+// ---------- PDF ----------
+function downloadPDF(){
+  if (!window.jspdf || !window.jspdf.jsPDF) {
+    toast('PDF tool could not load. Please check internet and refresh the page.');
+    return;
+  }
+  var jsPDF = window.jspdf.jsPDF;
+  var doc = new jsPDF();
+  var date = $('dayDate').value || todayStr();
+  var orders = Number($('onlineOrders').value) || 0;
+  var need = onlineNeed(orders);
+  var act = workers.filter(function(w){ return w.active; });
+  var p = act.filter(function(w){ return att[w.id] === 'P'; }).length;
+  var h = act.filter(function(w){ return att[w.id] === 'H'; }).length;
+  var a = act.filter(function(w){ return att[w.id] === 'A'; }).length;
+
+  // header band
+  doc.setFillColor(30, 122, 60);
+  doc.rect(0, 0, 210, 26, 'F');
+  doc.setTextColor(255, 255, 255);
+  doc.setFontSize(16); doc.setFont(undefined, 'bold');
+  doc.text(COMPANY + ' — Daily Packing Team Report', 14, 12);
+  doc.setFontSize(10); doc.setFont(undefined, 'normal');
+  doc.text('Date: ' + niceDate(date), 14, 20);
+
+  // summary line
+  doc.setTextColor(30, 36, 48);
+  doc.setFontSize(11);
+  doc.text('Online Orders: ' + orders + '    Online Team Needed: ' + need, 14, 36);
+  doc.text('Total Team: ' + act.length + '    Present: ' + p + '    Half Day: ' + h + '    Absent: ' + a, 14, 43);
+
+  // attendance table
+  var body = act.map(function(w, i){
+    var s = att[w.id] || 'P';
+    return [
+      i + 1,
+      w.name,
+      s === 'P' ? 'Present' : (s === 'H' ? 'Half Day' : 'Absent'),
+      s === 'A' ? '-' : (assign[w.id] || '-')
+    ];
+  });
+  doc.autoTable({
+    startY: 50,
+    head: [['#', 'Member Name', 'Attendance', 'Duty Assigned']],
+    body: body,
+    theme: 'grid',
+    headStyles: { fillColor: [30, 122, 60], fontSize: 10 },
+    styles: { fontSize: 10, cellPadding: 3 },
+    didParseCell: function(data){
+      if (data.section === 'body' && data.column.index === 2) {
+        var v = data.cell.raw;
+        if (v === 'Present') data.cell.styles.textColor = [30, 122, 60];
+        if (v === 'Absent') data.cell.styles.textColor = [198, 40, 40];
+        if (v === 'Half Day') data.cell.styles.textColor = [224, 138, 0];
+        data.cell.styles.fontStyle = 'bold';
+      }
+    }
+  });
+
+  // duty summary table
+  var y = doc.lastAutoTable.finalY + 8;
+  var dutyBody = DUTIES.map(function(d){
+    var names = act.filter(function(w){ return att[w.id] !== 'A' && assign[w.id] === d; })
+                   .map(function(w){ return w.name; });
+    return [d, names.length, names.join(', ') || '-'];
+  });
+  doc.autoTable({
+    startY: y,
+    head: [['Duty', 'People', 'Names']],
+    body: dutyBody,
+    theme: 'grid',
+    headStyles: { fillColor: [36, 86, 201], fontSize: 10 },
+    styles: { fontSize: 9, cellPadding: 3 },
+    columnStyles: { 2: { cellWidth: 100 } }
+  });
+
+  var notes = $('dayNotes').value.trim();
+  if (notes) {
+    var y2 = doc.lastAutoTable.finalY + 10;
+    doc.setFontSize(10);
+    doc.text('Note: ' + notes, 14, y2, { maxWidth: 180 });
+  }
+
+  doc.setFontSize(8); doc.setTextColor(120, 120, 120);
+  doc.text('Generated by ' + COMPANY + ' Packing Team Management System', 14, 290);
+
+  doc.save(COMPANY + '_Packing_Report_' + date + '.pdf');
+  toast('PDF downloaded ✓ Now attach it in WhatsApp');
+}
+
+// ---------- misc ----------
+function esc(s){
+  return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){
+    return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c];
+  });
+}
+
+init();
+</script>
+</body>
+</html>
